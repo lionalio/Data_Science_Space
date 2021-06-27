@@ -1,27 +1,12 @@
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import itertools
-from sklearn.model_selection import train_test_split
-from sklearn.decomposition import PCA
-from sklearn.pipeline import Pipeline
-
-from sklearn.preprocessing import MinMaxScaler
-
-import xgboost as xgb
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.model_selection import GridSearchCV
-
-from sklearn.metrics import accuracy_score, confusion_matrix
-
-import time
-
+from libs import *
 
 class Classification():
-    def __init__(self, filename, features, label_col, test_size=0.2):
+    def __init__(self, filename, features, label_col, 
+                mapping=None, test_size=0.2):
         self.df = pd.read_csv(filename)
-        self.X, self.y = self.df[features], self.df[label_col].values
+        self.mapping = mapping
+        self.data_preparation()
+        self.X, self.y = self.df[features], self.df[label_col]#.values
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(self.X, self.y, test_size=test_size)
         self.X_train_engineer = None
         self.X_test_engineer = None
@@ -34,13 +19,17 @@ class Classification():
     def timing(function):
         def wrapper(self):
             print('Running ', function.__name__)
-            print('Start timing at: ', time.time())
             start = time.time()
             function(self)
             stop = time.time()
             print('Time elapsed: ', stop - start)
             
         return wrapper
+
+    def mapping_data(self):
+        #print('You must convert all categorical data into numbers')
+        for k, v in self.mapping.items():
+            self.df[k] = self.df[k].map(v)
     
     def set_methods(self, preprocess, clf):
         self.method_preprocessing = preprocess
@@ -53,8 +42,9 @@ class Classification():
     
     @timing
     def data_preparation(self):
-        print('----- Running data preprocessing. Currently nothing to do...')
-        pass
+        #print('----- Running data preprocessing. Currently nothing to do...')
+        if self.mapping is not None:
+            self.mapping_data()
     
     @timing
     def preprocessing(self):
@@ -85,7 +75,33 @@ class Classification():
             plt.show()
         print('accuracy_score: ', accuracy_score(self.y_test, preds))
         print('confusion matrix for ', self.method_classifier.__class__.__name__ , ": ", confusion_matrix(self.y_test, preds))
-    
+        if len(np.unique(self.y)) == 2:
+            if type(self.y[0]) != str:
+                self.plot_roc()
+
+    def plot_roc(self):
+        fpr = dict()
+        tpr = dict()
+        roc_auc = dict()
+        if "predict_proba" not in dir(self.method_classifier):
+            print("This function doesnt have probability calculation")
+            return
+        probs = self.method_classifier.predict_proba(self.X_test_engineer)
+        fpr, tpr, _ = roc_curve(self.y_test, probs[:, 1])
+        roc_auc = auc(fpr, tpr)
+        plt.figure()
+        lw = 2
+        plt.plot(fpr, tpr, color='darkorange',
+                lw=lw, label='ROC curve (area = %0.2f)' % roc_auc)
+        plt.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='--')
+        plt.xlim([0.0, 1.0])
+        plt.ylim([0.0, 1.05])
+        plt.xlabel('False Positive Rate')
+        plt.ylabel('True Positive Rate')
+        plt.title('Receiver operating characteristic example')
+        plt.legend(loc="lower right")
+        plt.show()
+
     @timing
     def run(self):
         if self.method_set is False:

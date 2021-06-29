@@ -3,6 +3,12 @@ import pandas as pd
 import numpy as np
 import time
 import itertools
+import copy
+import os, glob, pickle
+
+# For audio
+import librosa
+import soundfile
 
 # Data Preparation
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, LabelEncoder
@@ -19,9 +25,11 @@ from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.linear_model import LogisticRegression, PassiveAggressiveClassifier
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.cluster import KMeans
 
 # Evaluation
-from sklearn.metrics import accuracy_score, confusion_matrix, roc_auc_score,  roc_curve, auc
+from sklearn.metrics import accuracy_score, confusion_matrix, roc_auc_score,  roc_curve, auc, \
+    silhouette_score
 
 # Plotting
 import matplotlib.pyplot as plt

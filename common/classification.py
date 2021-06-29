@@ -1,16 +1,9 @@
 from libs import *
+from data_preparation import *
 
-class Classification():
-    def __init__(self, filename, features, label_col, 
-                mapping=None, test_size=0.2):
-        self.df = pd.read_csv(filename)
-        self.mapping = mapping
-        self.data_preparation()
-        self.X, self.y = self.df[features], self.df[label_col]#.values
-        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(self.X, self.y, test_size=test_size)
-        self.X_train_engineer = None
-        self.X_test_engineer = None
-        self.method_preprocessing = None
+class Classification(DataPreparation):
+    def __init__(self, filename, features, label_col, delimiter=',', data_cat='conventional', test_size=0.2):
+        super().__init__(filename, features, label_col, delimiter, data_cat, test_size)
         self.method_classifier = None
         self.params_classifier = None
         self.method_set = False
@@ -26,30 +19,13 @@ class Classification():
             
         return wrapper
 
-    def mapping_data(self):
-        #print('You must convert all categorical data into numbers')
-        for k, v in self.mapping.items():
-            self.df[k] = self.df[k].map(v)
-    
-    def set_methods(self, preprocess, clf):
-        self.method_preprocessing = preprocess
+    def set_methods(self, clf):
         self.method_classifier = clf
         self.method_set = True
         
     def set_parameters(self, params):
         self.params_classifier = params
         self.parameter_set = True
-    
-    @timing
-    def data_preparation(self):
-        #print('----- Running data preprocessing. Currently nothing to do...')
-        if self.mapping is not None:
-            self.mapping_data()
-    
-    @timing
-    def preprocessing(self):
-        self.X_train_engineer = self.method_preprocessing.fit_transform(self.X_train)
-        self.X_test_engineer = self.method_preprocessing.transform(self.X_test)
         
     @timing
     def classifier(self):
@@ -108,7 +84,6 @@ class Classification():
             raise Exception('Methods are not yet set. Aborting!')
         if self.parameter_set is False:
             print('Warning: All parameters are taking default values. Consider tuning!')
-        self.data_preparation()
-        self.preprocessing()
+        super().processing()
         self.classifier()
         self.evaluate()

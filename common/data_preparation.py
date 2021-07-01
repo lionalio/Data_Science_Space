@@ -1,8 +1,46 @@
+from os import path
 from libs import *
 
+
+def load_single_file(filename, delimiter):
+    df = pd.read_csv(filename, delimiter=delimiter)
+    return df
+
+
+def load_path(root_path, delimiter):
+    group_data =[]
+    for root, d, files in os.walk(root_path):
+        for f in files:
+            filepath = "{}{}".format(root, f)
+            group_data.append(pd.read_csv(filepath, delimiter=delimiter))
+
+    return pd.concat(group_data)  # Watch out!
+
+
+def audio_extract(audio_file, chroma, mfcc, mel):
+    X = audio_file.read(dtype="float32")
+    sample_rate = audio_file.samplerate
+    if chroma:
+        # Fourier transform
+        stft = np.abs(librosa.stft(X))
+        result = np.array([])
+    if mfcc:   
+        mfccs = np.mean(librosa.feature.mfcc(y=X, sr=sample_rate, n_mfcc=40).T, axis=0)
+        result = np.hstack((result, mfccs))
+    if chroma:
+        chroma = np.mean(librosa.feature.chroma_stft(S=stft, sr=sample_rate).T,axis=0)
+        result = np.hstack((result, chroma))
+    if mel:
+        mel = np.mean(librosa.feature.melspectrogram(X, sr=sample_rate).T,axis=0)
+        result = np.hstack((result, mel))
+    return result
+
 class DataPreparation():
-    def __init__(self, filename, features, label_col, delimiter=',', data_type='conventional', test_size=0.2):
-        self.df = pd.read_csv(filename, delimiter=delimiter)
+    def __init__(self, filename, features, label_col, delimiter=',', 
+                single_file=True, data_type='tabular', test_size=0.2):
+        self.df = None
+        if single_file:
+            self.df = load_single_file(filename, delimiter=delimiter)
         self.data_type = data_type
         self.features = features
         self.label = label_col
@@ -44,7 +82,7 @@ class DataPreparation():
         self.df = enc.fit_transform(self.df)
 
     def dim_reduction(self, thresh=0.95):
-        pca = PCA(n_components=len(self.X.columns))
+        pca = PCA(n_components=self.X.shape[1])
         pca.fit(self.X)
         variances = np.cumsum(pca.explained_variance_ratio_)
         position = np.argmax(variances > thresh)
@@ -53,7 +91,7 @@ class DataPreparation():
         self.X = pca_final.fit_transform(self.X)
 
     def processing(self):
-        if self.methods['imputer'] is not None:
+        if 'imputer' in self.methods and self.methods['imputer'] is not None:
             self.missing_imputer(self.methods['imputer'])
         if self.mapping is not None:
             self.mapping_data()
@@ -61,18 +99,19 @@ class DataPreparation():
         self.X = self.df[self.features] 
         if self.label is not None: 
             self.y = self.df[self.label]#.values
-        if self.methods['dim_reduce'] is True:
+            if 'resampling' in self.methods and self.methods['resampling'] is not None:
+                self.X, self.y = self.methods['resampling'].fit_resample(self.X, self.y)
+        if 'dim_reduce' in self.methods and self.methods['dim_reduce'] is True:
             self.dim_reduction()
-
         if self.label is not None:
             self.process_supervised()
 
     def process_supervised(self):
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(self.X, self.y, 
                                                                                 test_size=self.test_size, random_state=7)
-        if self.methods['preprocess'] is not None:
-            if self.data_type == 'conventional':
-                if self.methods['dim_reduce'] is False:
+        if 'preprocess' in self.methods and self.methods['preprocess'] is not None:
+            if self.data_type == 'tabular':
+                if 'dim_reduce' in self.methods and self.methods['dim_reduce'] is False:
                     self.X_train_engineer = copy.copy(self.X_train)
                     self.X_test_engineer = copy.copy(self.X_test)
                     self.X_train_engineer[self.num_features] = self.methods['preprocess'].fit_transform(self.X_train[self.num_features])
@@ -81,13 +120,10 @@ class DataPreparation():
                     # Great. features changed entirely. Let's convert them
                     self.X_train_engineer = self.methods['preprocess'].fit_transform(self.X_train)
                     self.X_test_engineer = self.methods['preprocess'].transform(self.X_test)
-            elif self.data_type == 'nlp':
+            elif self.data_type == 'text':
                 # Let's hope in NLP, we only have ONE feature of document to take care of...
                 self.X_train_engineer = self.methods['preprocess'].fit_transform(self.X_train[self.cat_features[0]])
                 self.X_test_engineer = self.methods['preprocess'].transform(self.X_test[self.cat_features[0]])
-            elif self.data_type == 'audio':
-                # TODO: implement method here...
-                pass
         else:
             self.X_train_engineer = self.X_train
             self.X_test_engineer = self.X_test

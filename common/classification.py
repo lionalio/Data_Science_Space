@@ -2,12 +2,31 @@ from libs import *
 from data_preparation import *
 
 class Classification(DataPreparation):
-    def __init__(self, filename, features, label_col, delimiter=',', data_cat='conventional', test_size=0.2):
-        super().__init__(filename, features, label_col, delimiter, data_cat, test_size)
+    def __init__(self, filename, features, label_col, delimiter=',', 
+                single_file=True, data_cat='tabular', test_size=0.2):
+        super().__init__(filename, features, label_col, delimiter, single_file, data_cat, test_size)
+        self.load_data = False
         self.method_classifier = None
         self.params_classifier = None
         self.method_set = False
         self.parameter_set = False
+
+    def load_processed_data(self, processed_data):
+        self.load_data = True
+        self.data_type = processed_data.data_type
+        self.features = processed_data.features
+        self.label = processed_data.label_col
+        self.methods = processed_data.methods
+        self.mapping = processed_data.mapping
+        self.test_size = processed_data.test_size
+        self.X, self.y = processed_data.X, processed_data.y
+        self.X_train, self.X_test, self.y_train, self.y_test = processed_data.X_train, processed_data.X_test, \
+            processed_data.y_train, processed_data.y_test
+        self.X_train_engineer = None
+        self.X_test_engineer = None
+        self.features = processed_data.features
+        self.cat_features = processed_data.cat_features
+        self.num_features = processed_data.num_features
     
     def timing(function):
         def wrapper(self):
@@ -35,6 +54,7 @@ class Classification(DataPreparation):
                             param_grid=self.params_classifier)
         grid.fit(self.X_train_engineer, self.y_train)        
         self.method_classifier = grid.best_estimator_
+        print(grid.best_params_)
         
     @timing
     def evaluate(self):
@@ -84,6 +104,7 @@ class Classification(DataPreparation):
             raise Exception('Methods are not yet set. Aborting!')
         if self.parameter_set is False:
             print('Warning: All parameters are taking default values. Consider tuning!')
-        super().processing()
+        if self.load_data is False:
+            super().processing()
         self.classifier()
         self.evaluate()

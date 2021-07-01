@@ -30,21 +30,23 @@ class Clustering(DataPreparation):
         super().__init__(filename, features, label_col, delimiter, data_cat, test_size)
         self.n_best_cluster = 0
 
-    def run(self):
-        super().processing()
+    def find_clusters(self):
+        scores = []
         n_test = 20
-        scores, inertia = [], []
         for i in range(2, n_test):
-            kmeans = KMeans(n_clusters=i, random_state=7).fit(self.X)
-            pred = kmeans.predict(self.X)
+            cluster = KMeans(n_clusters=i, random_state=7).fit(self.X)
+            pred = cluster.predict(self.X)
             silhouette = silhouette_score(self.X, pred)
             scores.append(silhouette)
-            inertia.append(kmeans.inertia_)
+            #inertia.append(cluster.inertia_)
         n_cluster_chosen = scores.index(max(scores))+2
         self.n_best_cluster = n_cluster_chosen
-        print('best n cluster: ', n_cluster_chosen)
         plot_val(range(2, n_test), scores, 'Sihouette')
-        plot_val(range(2, n_test), inertia, 'Sum of squares')
+
+    def run(self):
+        super().processing()
+        self.find_clusters()
+        print('best n cluster: ', self.n_best_cluster)
 
     def plot_clusters(self, var1, var2):
         label = KMeans(n_clusters=self.n_best_cluster, random_state=7).fit_predict(self.X)

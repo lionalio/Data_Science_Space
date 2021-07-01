@@ -6,10 +6,6 @@ import itertools
 import copy
 import os, glob, pickle
 
-# For audio
-import librosa
-import soundfile
-
 # Data Preparation
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, LabelEncoder
 from sklearn.model_selection import train_test_split, GridSearchCV
@@ -19,6 +15,9 @@ from sklearn.pipeline import Pipeline
 # For NLP vectorization
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 
+# Resampling
+from imblearn.over_sampling import SMOTE
+
 # Machine Learning / AI
 import xgboost as xgb
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
@@ -26,6 +25,9 @@ from sklearn.naive_bayes import MultinomialNB
 from sklearn.linear_model import LogisticRegression, PassiveAggressiveClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.cluster import KMeans
+from sklearn.decomposition import TruncatedSVD
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.manifold import Isomap
 
 # Evaluation
 from sklearn.metrics import accuracy_score, confusion_matrix, roc_auc_score,  roc_curve, auc, \

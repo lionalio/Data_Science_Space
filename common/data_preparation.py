@@ -17,24 +17,6 @@ def load_path(root_path, delimiter):
     return pd.concat(group_data)  # Watch out!
 
 
-def audio_extract(audio_file, chroma, mfcc, mel):
-    X = audio_file.read(dtype="float32")
-    sample_rate = audio_file.samplerate
-    if chroma:
-        # Fourier transform
-        stft = np.abs(librosa.stft(X))
-        result = np.array([])
-    if mfcc:   
-        mfccs = np.mean(librosa.feature.mfcc(y=X, sr=sample_rate, n_mfcc=40).T, axis=0)
-        result = np.hstack((result, mfccs))
-    if chroma:
-        chroma = np.mean(librosa.feature.chroma_stft(S=stft, sr=sample_rate).T,axis=0)
-        result = np.hstack((result, chroma))
-    if mel:
-        mel = np.mean(librosa.feature.melspectrogram(X, sr=sample_rate).T,axis=0)
-        result = np.hstack((result, mel))
-    return result
-
 class DataPreparation():
     def __init__(self, filename, features, label_col, delimiter=',', 
                 single_file=True, data_type='tabular', test_size=0.2):
@@ -81,9 +63,59 @@ class DataPreparation():
     def encoder(self, enc):
         self.df = enc.fit_transform(self.df)
 
+    def create_train_test(self):
+        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(self.X, self.y, 
+                                                                                test_size=self.test_size, random_state=7)
+
+    def select_Lasso(self):
+        scaler = StandardScaler()
+        print(self.X_train)
+        X_train_std = scaler.fit_transform(self.X_train)
+        lasso = LassoCV()
+        lasso.fit(X_train_std, self.y_train)
+        X_test_std = lasso.transform(self.X_test)
+        r2 = lasso.score(X_test_std, self.y_test)
+        print('features selected from Lasso: ', self.X.columns[lasso.coef_ != 0])
+
+        return lasso.coef_ != 0
+
+    def select_GBR(self):
+        n_feature_select = int(len(self.X.columns)*3/4)
+        rfe = RFE(estimator = GradientBoostingRegressor(),
+            n_feature_to_select = n_feature_select,
+            step=2, verbose=0
+        )
+        rfe.fit(self.X_train, self.y_train)
+        print('features selected from Gradient Boosting: ', self.X.columns[rfe.support_])
+
+        return rfe.support_
+
+    def select_RFC(self):
+        n_feature_select = int(len(self.X.columns)*3/4)
+        rfe = RFE(estimator = RandomForestClassifier(),
+            n_feature_to_select = n_feature_select,
+            step=2, verbose=0
+        )
+        rfe.fit(self.X_train, self.y_train)
+        print('features selected from Random Forest: ', self.X.columns[rfe.support_])
+
+        return rfe.support_
+
+    def feature_selection(self):
+        mask_lasso = self.select_Lasso()
+        mask_gbr = self.select_GBR()
+        mask_rfc = self.select_RFC()
+        votes = np.sum([mask_lasso, mask_gbr, mask_rfc], axis=0)
+
+        selected_cols = self.X_columns[votes >= 2]
+        print('selected features: ', selected_cols)
+        self.X_train = self.X_train[selected_cols]
+        self.X_test = self.X_test[selected_cols]
+
     def dim_reduction(self, thresh=0.95):
-        pca = PCA(n_components=self.X.shape[1])
-        pca.fit(self.X)
+        X_pca = StandardScaler().fit_transform(self.X)
+        pca = PCA(n_components=X_pca.shape[1])
+        pca.fit(X_pca)
         variances = np.cumsum(pca.explained_variance_ratio_)
         position = np.argmax(variances > thresh)
         print('position to choose: ', position)
@@ -95,6 +127,8 @@ class DataPreparation():
             self.missing_imputer(self.methods['imputer'])
         if self.mapping is not None:
             self.mapping_data()
+        if 'encoder' in self.methods and self.methods['encoder'] is not None:
+            self.encoder(self, self.methods['encoder'])
 
         self.X = self.df[self.features] 
         if self.label is not None: 
@@ -107,8 +141,10 @@ class DataPreparation():
             self.process_supervised()
 
     def process_supervised(self):
-        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(self.X, self.y, 
-                                                                                test_size=self.test_size, random_state=7)
+        self.create_train_test()
+        if 'feature_selection' in self.methods and self.methods['feature_selection'] is True:
+            self.feature_selection()
+            
         if 'preprocess' in self.methods and self.methods['preprocess'] is not None:
             if self.data_type == 'tabular':
                 if 'dim_reduce' in self.methods and self.methods['dim_reduce'] is False:

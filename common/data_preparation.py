@@ -1,4 +1,5 @@
 from os import path
+from typing_extensions import TypeVarTuple
 from libs import *
 
 
@@ -66,6 +67,12 @@ class DataPreparation():
     def create_train_test(self):
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(self.X, self.y, 
                                                                                 test_size=self.test_size, random_state=7)
+
+    def remove_high_correlation(self, thresh=0.8):
+        corr = self.X.corr()
+        up_matrix = corr.where(np.triu(np.ones(corr.shape), k=1).astype(np.bool))
+        drop_cols = [col for col in up_matrix.columns if any(up_matrix[col] > thresh)]
+        self.X = self.X[col for col in features if col not in drop_cols]
 
     def select_Lasso(self):
         scaler = StandardScaler()
@@ -135,6 +142,8 @@ class DataPreparation():
             self.y = self.df[self.label]#.values
             if 'resampling' in self.methods and self.methods['resampling'] is not None:
                 self.X, self.y = self.methods['resampling'].fit_resample(self.X, self.y)
+        if 'remove_high_corr' in self.methods and self.methods['remove_high_corr'] is True:
+            self.remove_high_correlation()
         if 'dim_reduce' in self.methods and self.methods['dim_reduce'] is True:
             self.dim_reduction()
         if self.label is not None:

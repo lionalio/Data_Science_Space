@@ -67,7 +67,7 @@ class Classification(DataPreparation):
             opt = BayesSearchCV(
                 estimator=self.method_classifier,
                 search_spaces=self.params_classifier,
-                n_iter=20,
+                n_iter=50,
                 random_state=7
             )
             print('to Bayes')
@@ -123,7 +123,7 @@ class Classification(DataPreparation):
             raise Exception('Methods are not yet set. Aborting!')
         if self.parameter_set is False:
             print('Warning: All parameters are taking default values. Consider tuning!')
-        if self.load_data is False:
-            super().processing()
+        #if self.load_data is False:
+        #    super().processing()
         self.classifier(method=method)
         self.evaluate()

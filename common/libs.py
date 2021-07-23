@@ -30,7 +30,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.cluster import KMeans
 from sklearn.decomposition import TruncatedSVD
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from sklearn.manifold import Isomap
+from skranger.ensemble import RangerForestClassifier
 
 # For hyperparameter tuning
 from skopt import BayesSearchCV

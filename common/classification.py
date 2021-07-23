@@ -10,6 +10,13 @@ class Classification(DataPreparation):
         self.params_classifier = None
         self.method_set = False
         self.parameter_set = False
+        self.guidance()
+
+    def guidance(self):
+        print('Classification: consider doing the following steps:')
+        print('0/ Data preparation must be done!')
+        print('1/ set_method(): Set for classifier algorithm')
+        print('2/ set_parameters(): Set parameters for ')
 
     def load_processed_data(self, processed_data):
         self.load_data = True
@@ -46,15 +53,27 @@ class Classification(DataPreparation):
         self.params_classifier = params
         self.parameter_set = True
         
-    @timing
-    def classifier(self):
+    #@timing
+    def classifier(self,  method='GridSearch'):
+        opt = None
         if self.parameter_set is False:
             raise Exception('Error: All parameters are not yet set!')
-        grid = GridSearchCV(estimator=self.method_classifier, 
-                            param_grid=self.params_classifier)
-        grid.fit(self.X_train_engineer, self.y_train)        
-        self.method_classifier = grid.best_estimator_
-        print(grid.best_params_)
+        if method == 'GridSearch':
+            opt = GridSearchCV(
+                estimator=self.method_classifier, 
+                param_grid=self.params_classifier
+            )
+        elif method == 'BayesSearch':     
+            opt = BayesSearchCV(
+                estimator=self.method_classifier,
+                search_spaces=self.params_classifier,
+                n_iter=20,
+                random_state=7
+            )
+            print('to Bayes')
+        opt.fit(self.X_train, self.y_train)   
+        self.method_classifier = opt.best_estimator_
+        print(opt.best_params_)
         
     @timing
     def evaluate(self):
@@ -98,13 +117,13 @@ class Classification(DataPreparation):
         plt.legend(loc="lower right")
         plt.show()
 
-    @timing
-    def run(self):
+    #@timing
+    def run(self, method='GridSearch'):
         if self.method_set is False:
             raise Exception('Methods are not yet set. Aborting!')
         if self.parameter_set is False:
             print('Warning: All parameters are taking default values. Consider tuning!')
         if self.load_data is False:
             super().processing()
-        self.classifier()
+        self.classifier(method=method)
         self.evaluate()

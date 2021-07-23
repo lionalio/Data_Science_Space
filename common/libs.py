@@ -32,6 +32,10 @@ from sklearn.decomposition import TruncatedSVD
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.manifold import Isomap
 
+# For hyperparameter tuning
+from skopt import BayesSearchCV
+from skopt.space import Real, Categorical, Integer
+
 # Evaluation
 from sklearn.metrics import accuracy_score, confusion_matrix, roc_auc_score,  roc_curve, auc, \
     silhouette_score

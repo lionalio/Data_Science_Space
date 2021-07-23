@@ -1,5 +1,4 @@
 from os import path
-from typing_extensions import TypeVarTuple
 from libs import *
 
 
@@ -37,6 +36,13 @@ class DataPreparation():
         self.features = features
         self.cat_features = [f for f in self.features if self.df[f].dtypes == 'object' and f != label_col]
         self.num_features = [f for f in self.features if self.df[f].dtypes != 'object' and f != label_col]
+        self.guide()
+
+    def guide(self):
+        print('Data Preparation: consider doing the following steps:')
+        print('0/ Any EDA beforehand is highly recommended!')
+        print('1/ set_method_process(). It is recommended after EDA for any imputing/mapping/dim reduction/other processes')
+        print('2/ processing() will run the entire data preparation process.')
 
     def set_methods_process(self, methods):
         '''
@@ -54,7 +60,8 @@ class DataPreparation():
 
     def missing_imputer(self, imputer):
         if imputer is not None:
-            self.df[self.cat_features] = imputer.fit_transform(self.df[self.cat_features])
+            for f in self.cat_features:
+                self.df[f] = imputer.fit_transform(self.df[f])
         
     def mapping_data(self):
         for k, v in self.mapping.items():
@@ -69,10 +76,11 @@ class DataPreparation():
                                                                                 test_size=self.test_size, random_state=7)
 
     def remove_high_correlation(self, thresh=0.8):
+        print('Remove high correlation features with threshold {}'.format(thresh))
         corr = self.X.corr()
         up_matrix = corr.where(np.triu(np.ones(corr.shape), k=1).astype(np.bool))
         drop_cols = [col for col in up_matrix.columns if any(up_matrix[col] > thresh)]
-        self.X = self.X[col for col in features if col not in drop_cols]
+        self.X = self.X[[col for col in self.features if col not in drop_cols]]
 
     def select_Lasso(self):
         scaler = StandardScaler()
@@ -125,7 +133,7 @@ class DataPreparation():
         pca.fit(X_pca)
         variances = np.cumsum(pca.explained_variance_ratio_)
         position = np.argmax(variances > thresh)
-        print('position to choose: ', position)
+        print('dimemsion reduction: position to choose: ', position)
         pca_final = PCA(n_components=position)
         self.X = pca_final.fit_transform(self.X)
 

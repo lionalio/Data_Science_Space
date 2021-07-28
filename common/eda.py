@@ -41,6 +41,34 @@ class EDA():
             sns.countplot(data=self.df, x=self.label)
             plt.show()
 
+    def plot_compare_labels(self):
+        if self.label is None:
+            print('This kind of comparison is not necessary for data without labels')
+            return
+        for f in self.num_features:
+            plt.figure(figsize=(10, 5))
+            for val in self.df[self.label].unique():
+                sns.distplot(self.df[f][self.df[self.label] == val], bins=50, label=str(val))
+            plt.legend()
+            plt.title('feature {}'.format(f))
+            plt.show()
+
+    # Make sure to put some more stuffs for EDA:
+    # 1/ Divergence measurements between classes 
+    # (for now, take between two classes only, skip if data is multiclasses)
+    # 2/ Type of divergences: Kullback-Liebler, Hellinger, Kolmogorov-Smirnov test, Jensen-Shannon ...
+    # 3/ Might take normality tests for numerical features (Shapiro-Wilks, Q-Q plot, kurtosis, ..., )
+    # 4/ Might suggest some log transform for some highly skewed distributions
+    def divergence_measurements(self):
+        if self.label is None:
+            print('The divergence measurement is not considered if data has no label or class')
+            return
+        if len(self.df[self.label].unique()) > 2:
+            print('This implementation of divergence measurement currently not support multiclasses data')
+            return
+         
+
+
     def plot_correlation(self):
         if len(self.num_features) == 0:
             print('No point to draw pairplots without a feature with real values')
@@ -75,6 +103,7 @@ class EDA():
             print('Description of numerical features: ', self.df[self.cat_features].value_counts())
         self.label_distribution()
         self.features_to_be_imputed()
+        self.plot_compare_labels()
         #self.all_pairplots()
         #self.plot_correlation()
         #self.plot_count()

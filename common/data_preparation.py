@@ -1,4 +1,6 @@
 from os import path
+
+from pandas.io.parsers import read_csv
 from libs import *
 
 
@@ -22,7 +24,10 @@ class DataPreparation():
                 single_file=True, data_type='tabular', test_size=0.2):
         self.df = None
         if single_file:
-            self.df = load_single_file(filename, delimiter=delimiter)
+            if data_type == 'timeseries':
+                self.df = read_csv(filename, delimiter=delimiter, index_col=0)
+            else:
+                self.df = load_single_file(filename, delimiter=delimiter)
         self.data_type = data_type
         self.features = features
         self.label = label_col
@@ -72,8 +77,19 @@ class DataPreparation():
         self.df = enc.fit_transform(self.df)
 
     def create_train_test(self):
-        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(self.X, self.y, 
+        if self.data_type == 'tabular':
+            if self.y is None:
+                return
+            self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(self.X, self.y, 
                                                                                 test_size=self.test_size, random_state=7)
+        elif self.data_type == 'timeseries':
+            cut_point = int(0.2256*len(self.X))
+            self.X_train = self.X[:cut_point]
+            self.X_test = self.X[cut_point:]
+            if self.y is None:
+                return
+            self.y_train = self.y[:cut_point]
+            self.y_test = self.y[cut_point:]
 
     def remove_high_correlation(self, thresh=0.8):
         print('Remove high correlation features with threshold {}'.format(thresh))
@@ -128,16 +144,26 @@ class DataPreparation():
         self.X_test = self.X_test[selected_cols]
 
     def dim_reduction(self, thresh=0.95):
-        X_pca = StandardScaler().fit_transform(self.X)
-        pca = PCA(n_components=X_pca.shape[1])
-        pca.fit(X_pca)
-        variances = np.cumsum(pca.explained_variance_ratio_)
+        # First, work on training set
+        scaler = MinMaxScaler()
+        X_train_scaled = scaler.fit_transform(self.X_train)
+        pca1 = PCA(n_components=X_train_scaled.shape[1], svd_solver= 'full')
+        pca1.fit(X_train_scaled)
+        variances = np.cumsum(pca1.explained_variance_ratio_)
         position = np.argmax(variances > thresh)
+        if position < 2 and len(self.features) > 2:
+            print('Position is smaller than 2. Put it to 2')
+            position = 2
         print('dimemsion reduction: position to choose: ', position)
-        pca_final = PCA(n_components=position)
-        self.X = pca_final.fit_transform(self.X)
+        pca_final = PCA(n_components=position, svd_solver= 'full')
+        self.X_train = pca_final.fit_transform(X_train_scaled)
+
+        # Then, let's work on test set
+        X_test_scaled = scaler.transform(self.X_test)
+        self.X_test = pca_final.transform(X_test_scaled)
 
     def processing(self):
+        # Make some general steps before doing splitting train/test sets
         if 'imputer' in self.methods and self.methods['imputer'] is not None:
             self.missing_imputer(self.methods['imputer'])
         if self.mapping is not None:
@@ -145,20 +171,24 @@ class DataPreparation():
         if 'encoder' in self.methods and self.methods['encoder'] is not None:
             self.encoder(self, self.methods['encoder'])
 
-        self.X = self.df[self.features] 
+        self.X = self.df[self.features]
+        if 'remove_high_corr' in self.methods and self.methods['remove_high_corr'] is True:
+            self.remove_high_correlation()
+
+        # Make splitting now
+        self.create_train_test()
+
+        # Some stuffs should be carried out on training set 
         if self.label is not None: 
             self.y = self.df[self.label]#.values
             if 'resampling' in self.methods and self.methods['resampling'] is not None:
-                self.X, self.y = self.methods['resampling'].fit_resample(self.X, self.y)
-        if 'remove_high_corr' in self.methods and self.methods['remove_high_corr'] is True:
-            self.remove_high_correlation()
+                self.X_train, self.y_train = self.methods['resampling'].fit_resample(self.X_train, self.y_train)
         if 'dim_reduce' in self.methods and self.methods['dim_reduce'] is True:
             self.dim_reduction()
         if self.label is not None:
             self.process_supervised()
 
     def process_supervised(self):
-        self.create_train_test()
         if 'feature_selection' in self.methods and self.methods['feature_selection'] is True:
             self.feature_selection()
             

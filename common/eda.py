@@ -1,3 +1,4 @@
+from maths import JS_divergence, bhattacharyya_distance, hellinger_distance
 from libs import *
 
 class EDA():
@@ -61,13 +62,32 @@ class EDA():
     # 4/ Might suggest some log transform for some highly skewed distributions
     def divergence_measurements(self):
         if self.label is None:
-            print('The divergence measurement is not considered if data has no label or class')
+            print('Currently the divergence measurement is not considered if data has no label or class')
             return
         if len(self.df[self.label].unique()) > 2:
-            print('This implementation of divergence measurement currently not support multiclasses data')
+            print('This implementation of divergence measurement currently does not support multiclasses data')
             return
-         
-
+        for f in self.num_features:
+            hist =[]
+            xmin, xmax = 9999, -9999
+            for val in self.df[self.label].unique():
+                xmin = min(xmin, min(self.df[f][self.df[self.label] == val]))
+                xmax = max(xmax, max(self.df[f][self.df[self.label] == val]))
+            plt.figure(figsize=(10, 5))
+            bins = None
+            for val in self.df[self.label].unique():
+                h, bins = np.histogram(self.df[f][self.df[self.label] == val],
+                                        range=[xmin, xmax], 
+                                        bins=50, density=True)
+                plt.hist(self.df[f][self.df[self.label] == val], bins=bins, range=[xmin, xmax], density=True, alpha=0.3)
+                hist.append(h)
+            deltas = np.diff(bins)[0]
+            dist1, dist2 = hist[0]*deltas, hist[1]*deltas
+            print('KS test: ', ks_2samp(dist1, dist2))
+            print('Hellinger distance: ', hellinger_distance(dist1, dist2))
+            print('Bhattacharyya distance: ', bhattacharyya_distance(dist1, dist2))
+            print('Jensen-Shannon divergence: ', JS_divergence(dist1, dist2))
+            plt.show()
 
     def plot_correlation(self):
         if len(self.num_features) == 0:
@@ -101,9 +121,10 @@ class EDA():
             print('Description of numerical features: ', self.df[self.num_features].describe())
         if len(self.cat_features) > 0:
             print('Description of numerical features: ', self.df[self.cat_features].value_counts())
-        self.label_distribution()
-        self.features_to_be_imputed()
-        self.plot_compare_labels()
+        self.divergence_measurements()
+        #self.label_distribution()
+        #self.features_to_be_imputed()
+        #self.plot_compare_labels()
         #self.all_pairplots()
         #self.plot_correlation()
         #self.plot_count()

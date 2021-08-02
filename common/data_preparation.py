@@ -65,8 +65,10 @@ class DataPreparation():
 
     def missing_imputer(self, imputer):
         if imputer is not None:
-            for f in self.cat_features:
-                self.df[f] = imputer.fit_transform(self.df[f])
+            for f in self.features:
+                self.df[f] = imputer.fit_transform(self.df[f].values.reshape(-1, 1))
+        print('After imputing: ')
+        print(self.df.isna().sum())
         
     def mapping_data(self):
         for k, v in self.mapping.items():
@@ -74,11 +76,12 @@ class DataPreparation():
                 self.df[k] = self.df[k].map(v)
 
     def encoder(self, enc):
-        self.df = enc.fit_transform(self.df)
+        for f in self.cat_features:
+            self.df[f] = enc.fit_transform(self.df[f])
 
     def create_train_test(self):
         if self.data_type == 'tabular':
-            if self.y is None:
+            if self.label is None:
                 return
             self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(self.X, self.y, 
                                                                                 test_size=self.test_size, random_state=7)
@@ -165,13 +168,17 @@ class DataPreparation():
     def processing(self):
         # Make some general steps before doing splitting train/test sets
         if 'imputer' in self.methods and self.methods['imputer'] is not None:
+            print('Impute missing values with: {}'.format(self.methods['imputer'].__class__.__name__))
             self.missing_imputer(self.methods['imputer'])
         if self.mapping is not None:
+            print('Mapping data: ', self.mapping)
             self.mapping_data()
         if 'encoder' in self.methods and self.methods['encoder'] is not None:
-            self.encoder(self, self.methods['encoder'])
+            print('Encoding data with: {}'.format(self.methods['encoder'].__class__.__name__))
+            self.encoder(self.methods['encoder'])
 
         self.X = self.df[self.features]
+        self.y = self.df[self.label] if self.label is not None else None
         if 'remove_high_corr' in self.methods and self.methods['remove_high_corr'] is True:
             self.remove_high_correlation()
 

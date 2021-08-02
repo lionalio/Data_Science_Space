@@ -103,7 +103,6 @@ class DataPreparation():
 
     def select_Lasso(self):
         scaler = StandardScaler()
-        print(self.X_train)
         X_train_std = scaler.fit_transform(self.X_train)
         lasso = LassoCV()
         lasso.fit(X_train_std, self.y_train)

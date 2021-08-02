@@ -36,10 +36,10 @@ class Classification(DataPreparation):
         self.num_features = processed_data.num_features
     
     def timing(function):
-        def wrapper(self):
+        def wrapper(self, *args, **kwargs):
             print('Running ', function.__name__)
             start = time.time()
-            function(self)
+            function(self, *args, **kwargs)
             stop = time.time()
             print('Time elapsed: ', stop - start)
             
@@ -53,7 +53,7 @@ class Classification(DataPreparation):
         self.params_classifier = params
         self.parameter_set = True
         
-    #@timing
+    @timing
     def classifier(self,  method='GridSearch'):
         opt = None
         if self.parameter_set is False:
@@ -117,7 +117,7 @@ class Classification(DataPreparation):
         plt.legend(loc="lower right")
         plt.show()
 
-    #@timing
+    @timing
     def run(self, method='GridSearch'):
         if self.method_set is False:
             raise Exception('Methods are not yet set. Aborting!')

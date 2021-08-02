@@ -122,13 +122,11 @@ class EDA():
         if len(self.cat_features) > 0:
             print('Description of numerical features: ', self.df[self.cat_features].value_counts())
         self.divergence_measurements()
-        #self.label_distribution()
-        #self.features_to_be_imputed()
+        self.label_distribution()
+        self.features_to_be_imputed()
         #self.plot_compare_labels()
-        #self.all_pairplots()
-        #self.plot_correlation()
-        #self.plot_count()
-        #self.plot_box()
+        #self.all_pairplots()from sklearn.base import ClassifierMixin
+
         
 
     

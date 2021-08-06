@@ -73,6 +73,9 @@ class EDA():
             for val in self.df[self.label].unique():
                 xmin = min(xmin, min(self.df[f][self.df[self.label] == val]))
                 xmax = max(xmax, max(self.df[f][self.df[self.label] == val]))
+            if xmin >= xmax:
+                print('Not appropriate for viewing nor evaluating')
+                continue
             plt.figure(figsize=(10, 5))
             bins = None
             for val in self.df[self.label].unique():
@@ -87,6 +90,7 @@ class EDA():
             print('Hellinger distance: ', hellinger_distance(dist1, dist2))
             print('Bhattacharyya distance: ', bhattacharyya_distance(dist1, dist2))
             print('Jensen-Shannon divergence: ', JS_divergence(dist1, dist2))
+            plt.xlabel(f)
             plt.show()
 
     def plot_correlation(self):

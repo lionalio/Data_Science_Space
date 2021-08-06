@@ -79,6 +79,36 @@ class DataPreparation():
         for f in self.cat_features:
             self.df[f] = enc.fit_transform(self.df[f])
 
+    def cat_encoder(self, method='TargetEncoder'):
+        if self.y is None and method == 'TargetEncoder':
+            raise Exception('y variables are null. Consider process for them first!')
+        for f in self.cat_features:
+            if method == 'TargetEncoder':
+                self.X[f] = CatEncoders.TargetEncoder().fit_transform(self.X[f], self.y)
+            elif method == 'CountEncoder':
+                self.X[f] = CatEncoders.CountEncoder().fit_transform(self.X[f])
+            elif method == 'SumEncoder':
+                self.X[f] = CatEncoders.SumEncoder().fit_transform(self.X[f])
+        # Many more: 
+        # encoder = ce.BackwardDifferenceEncoder(cols=[...])
+        # encoder = ce.BaseNEncoder(cols=[...])
+        # encoder = ce.BinaryEncoder(cols=[...])
+        # encoder = ce.CatBoostEncoder(cols=[...])
+        # encoder = ce.CountEncoder(cols=[...])
+        # encoder = ce.GLMMEncoder(cols=[...])
+        # encoder = ce.HashingEncoder(cols=[...])
+        # encoder = ce.HelmertEncoder(cols=[...])
+        # encoder = ce.JamesSteinEncoder(cols=[...])
+        # encoder = ce.LeaveOneOutEncoder(cols=[...])
+        # encoder = ce.MEstimateEncoder(cols=[...])
+        # encoder = ce.OneHotEncoder(cols=[...])
+        # encoder = ce.OrdinalEncoder(cols=[...])
+        # encoder = ce.SumEncoder(cols=[...])
+        # encoder = ce.PolynomialEncoder(cols=[...])
+        # encoder = ce.TargetEncoder(cols=[...])
+        # encoder = ce.WOEEncoder(cols=[...])
+            
+            
     def create_train_test(self):
         if self.data_type == 'tabular':
             if self.label is None:
@@ -178,6 +208,9 @@ class DataPreparation():
 
         self.X = self.df[self.features]
         self.y = self.df[self.label] if self.label is not None else None
+        if 'cat_encoder' in self.methods and self.methods['cat_encoder'] is not None:
+            print('Categorical Encoder with method: {}'.format(self.methods['encoder'].__class__.__name__))
+            self.cat_encoder(self.methods['cat_encoder'])
         if 'remove_high_corr' in self.methods and self.methods['remove_high_corr'] is True:
             self.remove_high_correlation()
 

@@ -15,6 +15,10 @@ from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.decomposition import PCA
 from sklearn.pipeline import Pipeline
 
+# Encoding
+from sklearn.preprocessing import LabelEncoder
+import category_encoders as CatEncoders #TargetEncoder, CountEncoder, SumEncoder
+
 # Stats utils
 from scipy.stats import ks_2samp
 from scipy.spatial.distance import mahalanobis, jensenshannon, euclidean, chebyshev, cityblock

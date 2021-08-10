@@ -77,11 +77,14 @@ class DataPreparation():
 
     def encoder(self, enc):
         for f in self.cat_features:
-            self.df[f] = enc.fit_transform(self.df[f])
+            self.df[f] = enc.fit_transform(self.df[f].astype(str))
 
     def cat_encoder(self, method='TargetEncoder'):
         if self.y is None and method == 'TargetEncoder':
             raise Exception('y variables are null. Consider process for them first!')
+        if self.methods['encoder'] is not None:
+            print('Warning: conflicts encoding for categorical features. Picking encoder instead')
+            return
         for f in self.cat_features:
             if method == 'TargetEncoder':
                 self.X[f] = CatEncoders.TargetEncoder().fit_transform(self.X[f], self.y)

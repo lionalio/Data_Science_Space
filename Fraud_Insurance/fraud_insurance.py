@@ -5,7 +5,7 @@ if module_path not in sys.path:
     sys.path.append(module_path + "/common")
 
 from eda import *
-from classification import *
+from learning import *
 
 df = pd.read_csv('insurance_claims.csv')
 #print(df)
@@ -66,7 +66,7 @@ parameters = [
 drops = ['policy_number','policy_bind_date', 'incident_date','incident_location','auto_model', 
         'fraud_reported', '_c39']
 
-detector = Classification('insurance_claims.csv', 
+detector = Learning('insurance_claims.csv', 
                         [f for f in df.columns if f not in drops], 
                         label_col='fraud_reported')
 print(detector.df)

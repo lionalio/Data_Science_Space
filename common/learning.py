@@ -1,23 +1,18 @@
 from libs import *
 from data_preparation import *
 
-class Classification(DataPreparation):
+
+# For regression, value column is the same meaning as 'label' column in classification
+class Learning(DataPreparation):
     def __init__(self, filename, features, label_col, delimiter=',', 
                 single_file=True, data_cat='tabular', test_size=0.2):
         super().__init__(filename, features, label_col, delimiter, single_file, data_cat, test_size)
-        self.load_data = False
-        self.method_classifier = None
-        self.params_classifier = None
+        self.method_learner = None
+        self.params_learner = None
         self.method_set = False
         self.parameter_set = False
-        self.guidance()
 
-    def guidance(self):
-        print('Classification: consider doing the following steps:')
-        print('0/ Data preparation must be done!')
-        print('1/ set_method(): Set for classifier algorithm')
-        print('2/ set_parameters(): Set parameters for ')
-
+    @classmethod
     def load_processed_data(self, processed_data):
         self.load_data = True
         self.data_type = processed_data.data_type
@@ -34,7 +29,7 @@ class Classification(DataPreparation):
         self.features = processed_data.features
         self.cat_features = processed_data.cat_features
         self.num_features = processed_data.num_features
-    
+
     def timing(function):
         def wrapper(self, *args, **kwargs):
             print('Running ', function.__name__)
@@ -45,51 +40,59 @@ class Classification(DataPreparation):
             
         return wrapper
 
-    def set_methods(self, clf):
-        self.method_classifier = clf
+    def set_methods(self, rgr):
+        self.method_learner = rgr
         self.method_set = True
         
     def set_parameters(self, params):
-        self.params_classifier = params
+        self.params_learner = params
         self.parameter_set = True
-        
+
     @timing
-    def classifier(self,  method='GridSearch'):
+    def learner(self, method='GridSearch'):
         opt = None
         if self.parameter_set is False:
             raise Exception('Error: All parameters are not yet set!')
         if method == 'GridSearch':
             opt = GridSearchCV(
-                estimator=self.method_classifier, 
-                param_grid=self.params_classifier
+                estimator=self.method_learner, 
+                param_grid=self.params_learner
             )
         elif method == 'BayesSearch':     
             opt = BayesSearchCV(
-                estimator=self.method_classifier,
-                search_spaces=self.params_classifier,
+                estimator=self.method_learner,
+                search_spaces=self.params_learner,
                 n_iter=50,
                 random_state=7
             )
             print('to Bayes')
-        opt.fit(self.X_train, self.y_train)   
-        self.method_classifier = opt.best_estimator_
+        opt.fit(self.X_train_engineer, self.y_train)   
+        self.method_learner = opt.best_estimator_
+        print('Best parameters for learner {}'.format(self.method_learner.__class__.__name__))
         print(opt.best_params_)
-        
-    @timing
-    def evaluate(self):
-        preds = self.method_classifier.predict(self.X_test_engineer)
-        if self.method_classifier.__class__.__name__ == 'XGBClassifier':
-            xgb.plot_importance(self.method_classifier)
+
+    def evaluate_regression(self):
+        preds = self.method_learner.predict(self.X_test_engineer)
+        print('Mean squared error: ', mean_squared_error(self.y_test, preds))
+        #plt.figure(figsize=(15, 8))
+        #plt.plot(self.y_test, color='b', label='True')
+        #plt.plot(preds, color='r', label='Prediction')
+        #plt.show()
+
+    def evaluate_classification(self):
+        preds = self.method_learner.predict(self.X_test_engineer)
+        if self.method_learner.__class__.__name__ == 'XGBClassifier':
+            xgb.plot_importance(self.method_learner)
             plt.show()
-        elif self.method_classifier.__class__.__name__ == 'RandomForestClassifier':
-            importances = self.method_classifier.feature_importances_
+        elif self.method_learner.__class__.__name__ == 'RandomForestClassifier':
+            importances = self.method_learner.feature_importances_
             indices = np.argsort(importances)
 
             plt.figure(figsize=(15, 8))
             plt.barh(range(len(indices)), importances[indices])
             plt.show()
         print('accuracy_score: ', accuracy_score(self.y_test, preds))
-        print('confusion matrix for ', self.method_classifier.__class__.__name__ , ": ", confusion_matrix(self.y_test, preds))
+        print('confusion matrix for ', self.method_learner.__class__.__name__ , ": ", confusion_matrix(self.y_test, preds))
         if len(np.unique(self.y)) == 2:
             if type(self.y[0]) != str:
                 self.plot_roc()
@@ -98,10 +101,10 @@ class Classification(DataPreparation):
         fpr = dict()
         tpr = dict()
         roc_auc = dict()
-        if "predict_proba" not in dir(self.method_classifier):
+        if "predict_proba" not in dir(self.method_learner):
             print("This function doesnt have probability calculation")
             return
-        probs = self.method_classifier.predict_proba(self.X_test_engineer)
+        probs = self.method_learner.predict_proba(self.X_test_engineer)
         fpr, tpr, _ = roc_curve(self.y_test, probs[:, 1])
         roc_auc = auc(fpr, tpr)
         plt.figure()
@@ -125,5 +128,8 @@ class Classification(DataPreparation):
             print('Warning: All parameters are taking default values. Consider tuning!')
         #if self.load_data is False:
         #    super().processing()
-        self.classifier(method=method)
-        self.evaluate()
+        self.learner(method=method)
+        if self.type_learner == 'Classification':
+            self.evaluate_classification()
+        else:
+            self.evaluate_regression()

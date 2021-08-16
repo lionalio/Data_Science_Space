@@ -34,7 +34,8 @@ import xgboost as xgb
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, \
     GradientBoostingRegressor, RandomForestRegressor
 from sklearn.naive_bayes import MultinomialNB
-from sklearn.linear_model import LogisticRegression, PassiveAggressiveClassifier, Lasso, LassoCV
+from sklearn.linear_model import (LinearRegression, LogisticRegression, 
+                                PassiveAggressiveClassifier, Lasso, LassoCV)
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.cluster import KMeans
 from sklearn.decomposition import TruncatedSVD
@@ -46,8 +47,8 @@ from skopt import BayesSearchCV
 from skopt.space import Real, Categorical, Integer
 
 # Evaluation
-from sklearn.metrics import accuracy_score, confusion_matrix, roc_auc_score,  roc_curve, auc, \
-    silhouette_score
+from sklearn.metrics import (accuracy_score, confusion_matrix, roc_auc_score,  roc_curve, auc, \
+                            silhouette_score, mean_squared_error) 
 
 # Plotting
 import matplotlib.pyplot as plt

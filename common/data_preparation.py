@@ -41,6 +41,12 @@ class DataPreparation():
         self.features = features
         self.cat_features = [f for f in self.features if self.df[f].dtypes == 'object' and f != label_col]
         self.num_features = [f for f in self.features if self.df[f].dtypes != 'object' and f != label_col]
+        self.type_learner = None
+        if label_col is not None: 
+            if self.df[self.label].dtype == 'object':
+                self.type_learner = 'Classification'
+            else:
+                self.type_learner = 'Regression' 
         self.guide()
 
     def guide(self):
@@ -118,6 +124,10 @@ class DataPreparation():
                 return
             self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(self.X, self.y, 
                                                                                 test_size=self.test_size, random_state=7)
+            #self.X_train = self.X_train.astype('float32')
+            #self.X_test = self.X_test.astype('float32')
+            #self.y_train = self.y_train.astype('float32')
+            #self.y_test = self.y_test.astype('float32')
         elif self.data_type == 'timeseries':
             cut_point = int(0.2256*len(self.X))
             self.X_train = self.X[:cut_point]
@@ -139,7 +149,7 @@ class DataPreparation():
         X_train_std = scaler.fit_transform(self.X_train)
         lasso = LassoCV()
         lasso.fit(X_train_std, self.y_train)
-        X_test_std = lasso.transform(self.X_test)
+        X_test_std = scaler.transform(self.X_test)
         r2 = lasso.score(X_test_std, self.y_test)
         print('features selected from Lasso: ', self.X.columns[lasso.coef_ != 0])
 
@@ -148,7 +158,7 @@ class DataPreparation():
     def select_GBR(self):
         n_feature_select = int(len(self.X.columns)*3/4)
         rfe = RFE(estimator = GradientBoostingRegressor(),
-            n_feature_to_select = n_feature_select,
+            n_features_to_select = n_feature_select,
             step=2, verbose=0
         )
         rfe.fit(self.X_train, self.y_train)
@@ -158,8 +168,13 @@ class DataPreparation():
 
     def select_RFC(self):
         n_feature_select = int(len(self.X.columns)*3/4)
-        rfe = RFE(estimator = RandomForestClassifier(),
-            n_feature_to_select = n_feature_select,
+        est = None
+        if self.type_learner == 'Classification':
+            est = RandomForestClassifier()
+        else:
+            est = RandomForestRegressor()
+        rfe = RFE(estimator = est,
+            n_features_to_select = n_feature_select,
             step=2, verbose=0
         )
         rfe.fit(self.X_train, self.y_train)
@@ -171,9 +186,10 @@ class DataPreparation():
         mask_lasso = self.select_Lasso()
         mask_gbr = self.select_GBR()
         mask_rfc = self.select_RFC()
-        votes = np.sum([mask_lasso, mask_gbr, mask_rfc], axis=0)
+        masks = [mask_lasso, mask_gbr, mask_rfc]
+        votes = np.sum(masks, axis=0)
 
-        selected_cols = self.X_columns[votes >= 2]
+        selected_cols = self.X.columns[votes >= 2]
         print('selected features: ', selected_cols)
         self.X_train = self.X_train[selected_cols]
         self.X_test = self.X_test[selected_cols]

@@ -51,6 +51,7 @@ class Learning(DataPreparation):
     @timing
     def learner(self, method='GridSearch'):
         opt = None
+        cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
         if self.parameter_set is False:
             raise Exception('Error: All parameters are not yet set!')
         if method == 'GridSearch':
@@ -63,13 +64,15 @@ class Learning(DataPreparation):
                 estimator=self.method_learner,
                 search_spaces=self.params_learner,
                 n_iter=50,
-                random_state=7
+                random_state=7,
+                cv=cv
             )
             print('to Bayes')
         opt.fit(self.X_train_engineer, self.y_train)   
         self.method_learner = opt.best_estimator_
         print('Best parameters for learner {}'.format(self.method_learner.__class__.__name__))
         print(opt.best_params_)
+        print('Best score on training set: ', opt.best_score_)
 
     def evaluate_regression(self):
         preds = self.method_learner.predict(self.X_test_engineer)

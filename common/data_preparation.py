@@ -71,8 +71,9 @@ class DataPreparation():
 
     def missing_imputer(self, imputer):
         if imputer is not None:
-            for f in self.features:
-                self.df[f] = imputer.fit_transform(self.df[f].values.reshape(-1, 1))
+            #for f in self.features:
+            #    self.df[f] = imputer.fit_transform(self.df[f].values.reshape(-1, 1))
+            self.df = pd.DataFrame(imputer.fit_transform(self.df), columns=self.df.columns)
         print('After imputing: ')
         print(self.df.isna().sum())
         
@@ -123,7 +124,7 @@ class DataPreparation():
             if self.label is None:
                 return
             self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(self.X, self.y, 
-                                                                                test_size=self.test_size, random_state=7)
+                                                                                test_size=self.test_size)
             #self.X_train = self.X_train.astype('float32')
             #self.X_test = self.X_test.astype('float32')
             #self.y_train = self.y_train.astype('float32')
@@ -218,6 +219,8 @@ class DataPreparation():
         if 'imputer' in self.methods and self.methods['imputer'] is not None:
             print('Impute missing values with: {}'.format(self.methods['imputer'].__class__.__name__))
             self.missing_imputer(self.methods['imputer'])
+        elif 'drop_na' in self.methods and self.methods['drop_na'] is True:
+            self.df = self.df.dropna().reset_index(drop=True)
         if self.mapping is not None:
             print('Mapping data: ', self.mapping)
             self.mapping_data()
@@ -238,7 +241,6 @@ class DataPreparation():
 
         # Some stuffs should be carried out on training set 
         if self.label is not None: 
-            self.y = self.df[self.label]#.values
             if 'resampling' in self.methods and self.methods['resampling'] is not None:
                 self.X_train, self.y_train = self.methods['resampling'].fit_resample(self.X_train, self.y_train)
         if 'dim_reduce' in self.methods and self.methods['dim_reduce'] is True:
@@ -266,5 +268,5 @@ class DataPreparation():
                 self.X_train_engineer = self.methods['preprocess'].fit_transform(self.X_train[self.cat_features[0]])
                 self.X_test_engineer = self.methods['preprocess'].transform(self.X_test[self.cat_features[0]])
         else:
-            self.X_train_engineer = self.X_train
-            self.X_test_engineer = self.X_test
+            self.X_train_engineer = copy.copy(self.X_train)
+            self.X_test_engineer = copy.copy(self.X_test)

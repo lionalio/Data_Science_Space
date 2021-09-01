@@ -48,8 +48,18 @@ class Learning(DataPreparation):
         self.params_learner = params
         self.parameter_set = True
 
+    def save(self, filename):
+        if self.method_learner is None:
+            print('Yikes! Model not found! Not saving anything...')
+            return
+        if filename is None or len(filename) == 0:
+            print('Warning: Invalid filename. Making default name. Consider change it by hand later')
+            filename = '{}.pkl'.format(self.method_learner.__class__.__name__)
+        pickle.dump(self.method_learner, open(filename, 'wb'))
+        print('Saving file {} successful.'.format(filename))
+
     @timing
-    def learner(self, method='GridSearch'):
+    def learner(self, method='GridSearch', saveto=None):
         opt = None
         cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
         if self.parameter_set is False:
@@ -70,6 +80,8 @@ class Learning(DataPreparation):
             print('to Bayes')
         opt.fit(self.X_train_engineer, self.y_train)   
         self.method_learner = opt.best_estimator_
+        print('Saving to model')
+        self.save(filename=saveto)
         print('Best parameters for learner {}'.format(self.method_learner.__class__.__name__))
         print(opt.best_params_)
         print('Best score on training set: ', opt.best_score_)
